@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Trie Autocomplete</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="aurora"></div>
+<svg id="hills" viewBox="0 0 1000 200" preserveAspectRatio="none" aria-hidden="true">
+ <path d="M0 120 L90 70 L170 110 L260 50 L360 105 L470 60 L580 115 L690 55 L790 100 L890 65 L1000 110 V200 H0Z" fill="#6d4a7a" opacity=".55"/>
+ <path d="M0 160 L120 125 L240 150 L380 120 L520 155 L660 118 L800 150 L920 125 L1000 145 V200 H0Z" fill="#2a1848"/>
+ <g fill="#cdb7c9"><path d="M80 200V172L100 156L120 172V200Z"/><path d="M430 200V176L452 158L474 176V200Z"/><path d="M820 200V170L842 152L864 170V200Z"/></g>
+ <g fill="#ffd27a"><rect x="96" y="178" width="8" height="8"/><rect x="448" y="182" width="8" height="8"/><rect x="838" y="176" width="8" height="8"/></g>
+</svg>
+<canvas id="fx" aria-hidden="true"></canvas>
+
+<main>
+<section class="card">
+ <header>
+  <div class="logo" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7fc4ff" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="1.6"/><path d="M12 7v5M12 12L6 17M12 12l6 5M12 12v6"/><circle cx="6" cy="19" r="1.6"/><circle cx="12" cy="20" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg></div>
+  <h1>Trieverse</h1>
+  <p>Type a word and watch the Trie trace it through the night sky.</p>
+ </header>
+
+ <div class="field">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+  <div class="inwrap">
+   <div class="ghost" id="ghost" aria-hidden="true"></div>
+   <input id="q" type="text" role="combobox" aria-expanded="false" aria-controls="list" aria-autocomplete="both" aria-label="Search words" placeholder="Start typing a word, or try t?ee, pre*ion" autocomplete="off" autocapitalize="off" spellcheck="false">
+  </div>
+  <kbd aria-hidden="true">/</kbd>
+ </div>
+
+ <div class="meta">
+  <ol id="path" aria-label="Trie path"></ol>
+  <span class="chip" id="stat">Type to traverse the Trie</span>
+ </div>
+ <div id="count"><span id="countVis" aria-hidden="true"></span><span class="sr" id="countSr" aria-live="polite"></span></div>
+
+ <div class="tabs" role="tablist">
+  <button role="tab" id="t-res" aria-selected="true" aria-controls="p-res">Suggestions</button>
+  <button role="tab" id="t-sky" aria-selected="false" aria-controls="p-sky">✦ Constellation</button>
+  <button role="tab" id="t-race" aria-selected="false" aria-controls="p-race">⚡ Race</button>
+  <button role="tab" id="t-hunt" aria-selected="false" aria-controls="p-hunt">🎯 Challenge</button>
+ </div>
+
+ <div id="p-res" role="tabpanel" aria-labelledby="t-res">
+  <ul id="list" role="listbox" aria-label="Suggestions"></ul>
+  <div id="plant"></div>
+  <div id="empty"></div>
+ </div>
+ <div id="p-sky" role="tabpanel" aria-labelledby="t-sky" hidden>
+  <div id="skywrap"><canvas id="sky" aria-label="Constellation view of the Trie. Use the suggestions tab for an accessible list."></canvas></div>
+  <p class="note">Bright path = your letters. Four-point stars end a word. Hover a star to read it, click to search it.</p>
+ </div>
+ <div id="p-race" role="tabpanel" aria-labelledby="t-race" hidden>
+  <div class="race">
+   <span>Trie</span><div class="bar"><i id="rbT"></i></div><span id="rmT">-</span>
+   <span>Linear scan</span><div class="bar"><i id="rbL"></i></div><span id="rmL">-</span>
+  </div>
+  <p class="note" id="rnote">Type something to start the race.</p>
+  <div class="tools"><button class="chip" id="boost">Boost dictionary ×50</button></div>
+ </div>
+
+ <div id="p-hunt" role="tabpanel" aria-labelledby="t-hunt" hidden>
+  <p class="note" id="hPrompt">Get a two-letter start, then find as many long words as you can in 30 seconds.</p>
+  <div class="tools"><button class="chip" id="hStart">🎯 Start round</button><span class="chip" id="hTime">30s</span><span class="chip" id="hScore">0 pts</span><span class="chip" id="hStreak">streak 0</span></div>
+  <input class="plain-in" id="hIn" placeholder="Type a word and press Enter" aria-label="Your word" autocomplete="off" autocapitalize="off" spellcheck="false" disabled>
+  <div id="hMsg" role="status"></div>
+  <ul id="hList" aria-label="Words found"></ul>
+ </div>
+
+ <div class="tools">
+  <button class="chip" id="surprise">🎲 Surprise me</button>
+  <button class="chip" id="reset">Reset dictionary</button>
+  <button class="chip" id="sound" aria-pressed="false">🔇 Sound off</button>
+ </div>
+
+ <footer>
+  <span><kbd>↑</kbd> <kbd>↓</kbd> navigate</span><span><kbd>Enter</kbd> select</span><span><kbd>Tab</kbd> accept</span><span><kbd>Esc</kbd> close</span><span><kbd>/</kbd> focus</span><span><kbd>C</kbd> sky</span>
+  <span class="pill">Powered by Trie</span>
+ </footer>
+</section>
+</main>
+<div id="toast" role="status"></div>
+
+<script src="js/trie.js"></script>
+<script src="js/dictionary.js"></script>
+<script src="js/state.js"></script>
+<script src="js/sound.js"></script>
+<script src="js/search.js"></script>
+<script src="js/race.js"></script>
+<script src="js/constellation.js"></script>
+<script src="js/aurora.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/wordhunt.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
